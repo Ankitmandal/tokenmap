@@ -1,0 +1,30 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Builder {
+  id             Int      @id @default(autoincrement())
+  email          String   @unique
+  githubUsername  String?  @map("github_username")
+  city           String
+  country        String   @default("")
+  lat            Float?
+  lng            Float?
+  referralCode   String   @unique @default(uuid()) @map("referral_code")
+  claimCode      String   @unique @map("claim_code")
+  referredBy     String?  @map("referred_by")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  // Token verification
+  totalTokens    BigInt   @default(0) @map("total_tokens")
+  provider       String?  // "claude-code" | "openai" | "anthropic" | "manual"
+  verified       Boolean  @default(false)
+  verifiedAt     DateTime? @map("verified_at")
+
+  @@map("builders")
+}

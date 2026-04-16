@@ -1,0 +1,12 @@
+{
+  "name": "tokenmap",
+  "version": "1.0.0",
+  "description": "Scan your Claude Code usage and claim your tile on TokenMap",
+  "bin": {
+    "tokenmap": "./bin/tokenmap.mjs"
+  },
+  "type": "module",
+  "keywords": ["claude", "claude-code", "tokenmap", "ai", "leaderboard"],
+  "license": "MIT",
+  "files": ["bin/"]
+}
