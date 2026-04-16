@@ -26,6 +26,9 @@ model Builder {
   verified       Boolean  @default(false)
   verifiedAt     DateTime? @map("verified_at")
 
+  // Projects (from CLI scan)
+  projects       Json?    @default("[]")
+
   // Payment
   paid           Boolean  @default(false)
   paidAt         DateTime? @map("paid_at")

@@ -61,7 +61,15 @@ export async function action({ request }: Route.ActionArgs) {
     return Response.json({ error: "Invalid claim token. Sign up at tokenmap.dev first." }, { status: 404 });
   }
 
-  // Update builder with verified stats
+  // Build projects array with default visibility
+  const projectsData = (stats.projects || []).map((p: { name: string; count: number }) => ({
+    name: p.name,
+    messages: p.count,
+    visibility: "public" as const, // default to public, user can change later
+    url: "",
+  }));
+
+  // Update builder with verified stats + projects
   await prisma.builder.update({
     where: { id: builder.id },
     data: {
@@ -69,6 +77,7 @@ export async function action({ request }: Route.ActionArgs) {
       provider: "claude-code",
       verified: true,
       verifiedAt: new Date(),
+      projects: projectsData,
     },
   });
 

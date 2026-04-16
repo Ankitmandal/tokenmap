@@ -320,7 +320,56 @@ function PostSignup({
     );
   }
 
-  // Done state — position card
+  // Done state — position card + project management
+  return (
+    <DoneState result={result} claimCode={claimToken} />
+  );
+}
+
+// ── Done state: position card + project showcase management ──
+function DoneState({ result, claimCode }: { result: SignupResult; claimCode: string }) {
+  const [projects, setProjects] = useState<any[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [showProjects, setShowProjects] = useState(false);
+
+  // Fetch projects on mount
+  useEffect(() => {
+    async function fetchProjects() {
+      try {
+        const res = await fetch(`/api/projects?code=${claimCode}`);
+        const data = await res.json();
+        if (data.projects) setProjects(data.projects);
+      } catch {}
+      setLoadingProjects(false);
+    }
+    fetchProjects();
+  }, [claimCode]);
+
+  async function saveProjects() {
+    setSaving(true);
+    try {
+      await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: claimCode, projects }),
+      });
+    } catch {}
+    setSaving(false);
+  }
+
+  function updateProject(index: number, field: string, value: string) {
+    const updated = [...projects];
+    updated[index] = { ...updated[index], [field]: value };
+    setProjects(updated);
+  }
+
+  const visibilityOptions = [
+    { value: "public", label: "Public", color: "text-green-400" },
+    { value: "building", label: "Building", color: "text-yellow-400" },
+    { value: "hidden", label: "Hidden", color: "text-white/25" },
+  ];
+
   return (
     <div className="space-y-4">
       <div className="text-center space-y-3">
@@ -328,7 +377,7 @@ function PostSignup({
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
-          {result.alreadyExists ? "Welcome back" : "You're in"}
+          You're live on the map
         </div>
 
         <div className="bg-white/[0.03] rounded-xl p-5 border border-white/[0.06]">
@@ -351,6 +400,102 @@ function PostSignup({
         </div>
       </div>
 
+      {/* Profile link */}
+      {result.githubUsername && (
+        <div className="text-center">
+          <a
+            href={`/u/${result.githubUsername}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-orange-400/60 hover:text-orange-400 text-[11px] transition"
+          >
+            Your public profile → /u/{result.githubUsername}
+          </a>
+        </div>
+      )}
+
+      {/* Project showcase toggle */}
+      {projects.length > 0 && (
+        <div className="space-y-2">
+          <button
+            onClick={() => setShowProjects(!showProjects)}
+            className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg bg-white/[0.025] border border-white/[0.06] hover:border-white/[0.1] transition"
+          >
+            <span className="text-[12px] font-medium text-white/60">
+              Manage projects ({projects.length})
+            </span>
+            <svg
+              className={`w-3.5 h-3.5 text-white/25 transition-transform ${showProjects ? "rotate-180" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {showProjects && (
+            <div className="space-y-2">
+              {loadingProjects ? (
+                <p className="text-white/20 text-[11px] text-center py-3">Loading...</p>
+              ) : (
+                <>
+                  {projects.map((p, i) => (
+                    <div
+                      key={p.name}
+                      className="bg-white/[0.02] rounded-lg p-3 border border-white/[0.05] space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[12px] font-medium truncate flex-1">{p.name}</span>
+                        <span className="text-white/15 text-[10px] font-mono ml-2">
+                          {formatTokens(p.messages)} msgs
+                        </span>
+                      </div>
+
+                      {/* Visibility toggle */}
+                      <div className="flex gap-1">
+                        {visibilityOptions.map((opt) => (
+                          <button
+                            key={opt.value}
+                            onClick={() => updateProject(i, "visibility", opt.value)}
+                            className={`flex-1 py-1 rounded text-[10px] font-medium transition border ${
+                              p.visibility === opt.value
+                                ? `${opt.color} bg-white/[0.06] border-white/[0.1]`
+                                : "text-white/20 border-transparent hover:text-white/40"
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* URL input (only for public/building) */}
+                      {p.visibility !== "hidden" && (
+                        <input
+                          type="url"
+                          placeholder="Product URL (optional)"
+                          value={p.url || ""}
+                          onChange={(e) => updateProject(i, "url", e.target.value)}
+                          className="w-full px-2 py-1.5 rounded bg-black/30 border border-white/[0.06] text-[11px] text-white/60 placeholder-white/15 focus:outline-none focus:border-orange-500/30 transition"
+                        />
+                      )}
+                    </div>
+                  ))}
+
+                  <button
+                    onClick={saveProjects}
+                    disabled={saving}
+                    className="w-full py-2 rounded-lg bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 text-[12px] font-medium transition disabled:opacity-50"
+                  >
+                    {saving ? "Saving..." : "Save project settings"}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Share */}
       <div className="text-center">
         <button
@@ -358,15 +503,17 @@ function PostSignup({
             const tokenPart = Number(result.totalTokens) > 0
               ? ` ${formatTokens(Number(result.totalTokens))} tokens burned.`
               : "";
-            const text = `I'm #${result.position} on TokenMap.${tokenPart}\n\n#${result.cityPosition} in ${result.city}. Claim your tile → tokenmap.dev`;
-            navigator.clipboard.writeText(text);
+            const text = encodeURIComponent(
+              `I'm #${result.position} on TokenMap.${tokenPart}\n\n#${result.cityPosition} in ${result.city}. Claim your tile → tokenmap.dev`
+            );
+            window.open(`https://twitter.com/intent/tweet?text=${text}`, "_blank");
           }}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-white/50 text-[12px] font-medium transition"
         >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
           </svg>
-          Copy & share on Twitter
+          Share on Twitter
         </button>
       </div>
     </div>
