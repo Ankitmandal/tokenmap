@@ -36,9 +36,9 @@ export function meta({}: Route.MetaArgs) {
 
 export async function loader({}: Route.LoaderArgs) {
   const [totalCount, topBuilders] = await Promise.all([
-    prisma.builder.count({ where: { paid: true, totalTokens: { gt: 0 } } }),
+    prisma.builder.count({ where: { paid: true, totalTokens: { gt: BigInt(0) } } }),
     prisma.builder.findMany({
-      where: { paid: true, totalTokens: { gt: 0 } },
+      where: { paid: true, totalTokens: { gt: BigInt(0) } },
       select: {
         githubUsername: true,
         city: true,
