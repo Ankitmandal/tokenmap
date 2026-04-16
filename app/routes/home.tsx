@@ -75,43 +75,61 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const [builders, setBuilders] = useState<BuilderEntry[]>(initialBuilders);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [currentUser, setCurrentUser] = useState<{ name: string; email: string; city: string; tokens: string; verified: boolean; paid: boolean; claimCode: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ name: string; email: string; city: string; tokens: string; verified: boolean; paid: boolean; claimCode: string; position: number; cityPosition: number; cityCount: number } | null>(null);
+  const [restoringSession, setRestoringSession] = useState(false);
 
-  // Restore session from localStorage on mount
+  // Restore session from localStorage OR handle ?paid=true return
   useEffect(() => {
-    const stored = localStorage.getItem("tokenmap_user");
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        if (parsed.email) {
-          // Re-fetch fresh data from server
-          fetch("/api/signup", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: parsed.email, city: parsed.city || "Unknown", githubUsername: parsed.name }),
-          })
-            .then((r) => r.json())
-            .then((data) => {
-              if (data.success) {
-                const user = {
-                  name: data.githubUsername || data.email.split("@")[0],
-                  email: data.email,
-                  city: data.city,
-                  tokens: data.totalTokens,
-                  verified: data.verified,
-                  paid: data.paid,
-                  claimCode: data.claimCode,
-                };
-                setCurrentUser(user);
-                localStorage.setItem("tokenmap_user", JSON.stringify(user));
-              }
-            })
-            .catch(() => {});
-        }
-      } catch {
-        localStorage.removeItem("tokenmap_user");
-      }
+    const url = new URL(window.location.href);
+    const paidReturn = url.searchParams.get("paid") === "true";
+    const emailReturn = url.searchParams.get("email");
+
+    // Clean up URL params
+    if (paidReturn) {
+      window.history.replaceState({}, "", "/");
     }
+
+    // If returning from payment, look up by email
+    const stored = localStorage.getItem("tokenmap_user");
+    const storedParsed = stored ? (() => { try { return JSON.parse(stored); } catch { return null; } })() : null;
+
+    const email = emailReturn || storedParsed?.email;
+    if (!email) return;
+
+    setRestoringSession(true);
+
+    fetch("/api/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        city: storedParsed?.city || "Unknown",
+        githubUsername: storedParsed?.name || "",
+      }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) {
+          // If returning from payment, treat as paid even if webhook hasn't fired yet
+          const isPaid = data.paid || paidReturn;
+          const user = {
+            name: data.githubUsername || data.email.split("@")[0],
+            email: data.email,
+            city: data.city,
+            tokens: data.totalTokens,
+            verified: data.verified,
+            paid: isPaid,
+            claimCode: data.claimCode,
+            position: data.position,
+            cityPosition: data.cityPosition,
+            cityCount: data.cityCount,
+          };
+          setCurrentUser(user);
+          localStorage.setItem("tokenmap_user", JSON.stringify(user));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setRestoringSession(false));
   }, []);
 
   useEffect(() => {
@@ -335,27 +353,39 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           {/* Signup form */}
           <div style={{ width: "320px" }} data-signup-form>
             <div className="rounded-xl border border-white/[0.08] p-4" style={{ background: "rgba(5,5,16,0.85)", backdropFilter: "blur(12px)" }}>
-              <h2 className="text-[14px] font-bold tracking-tight mb-3">
-                Get on the board
-              </h2>
-              <SignupForm
-                currentUser={currentUser}
-                onSuccess={(result) => {
-                  refreshLeaderboard();
-                  if (result) {
-                    const user = {
-                      name: result.githubUsername || result.email.split("@")[0],
-                      email: result.email,
-                      city: result.city,
-                      tokens: result.totalTokens,
-                      verified: result.verified,
-                      paid: result.paid,
-                      claimCode: result.claimCode,
-                    };
-                    setCurrentUser(user);
-                    localStorage.setItem("tokenmap_user", JSON.stringify(user));
-                  }
-                }} />
+              {!currentUser && !restoringSession && (
+                <h2 className="text-[14px] font-bold tracking-tight mb-3">
+                  Get on the board
+                </h2>
+              )}
+              {restoringSession ? (
+                <div className="flex items-center justify-center py-6">
+                  <span className="inline-block w-4 h-4 border-2 border-orange-400/30 border-t-orange-400 rounded-full animate-spin" />
+                  <span className="text-white/30 text-[12px] ml-2">Loading your profile...</span>
+                </div>
+              ) : (
+                <SignupForm
+                  currentUser={currentUser}
+                  onSuccess={(result) => {
+                    refreshLeaderboard();
+                    if (result) {
+                      const user = {
+                        name: result.githubUsername || result.email.split("@")[0],
+                        email: result.email,
+                        city: result.city,
+                        tokens: result.totalTokens,
+                        verified: result.verified,
+                        paid: result.paid,
+                        claimCode: result.claimCode,
+                        position: result.position,
+                        cityPosition: result.cityPosition,
+                        cityCount: result.cityCount,
+                      };
+                      setCurrentUser(user);
+                      localStorage.setItem("tokenmap_user", JSON.stringify(user));
+                    }
+                  }} />
+              )}
             </div>
           </div>
         </div>

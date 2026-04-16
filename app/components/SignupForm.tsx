@@ -22,7 +22,7 @@ export function SignupForm({
   currentUser,
 }: {
   onSuccess?: (result: SignupResult) => void;
-  currentUser?: { name: string; email: string; city: string; tokens: string; verified: boolean; paid: boolean; claimCode: string } | null;
+  currentUser?: { name: string; email: string; city: string; tokens: string; verified: boolean; paid: boolean; claimCode: string; position: number; cityPosition: number; cityCount: number } | null;
 }) {
   const [email, setEmail] = useState("");
   const [city, setCity] = useState("");
@@ -35,16 +35,15 @@ export function SignupForm({
   // Auto-restore session from currentUser (localStorage)
   useEffect(() => {
     if (currentUser && !result) {
-      // Build a SignupResult from the stored user data
       setResult({
         success: true,
         alreadyExists: true,
-        position: 0,
+        position: currentUser.position,
         email: currentUser.email,
         githubUsername: currentUser.name,
         city: currentUser.city,
-        cityPosition: 0,
-        cityCount: 0,
+        cityPosition: currentUser.cityPosition,
+        cityCount: currentUser.cityCount,
         claimCode: currentUser.claimCode,
         referralCode: "",
         verified: currentUser.verified,
@@ -181,6 +180,7 @@ function PostSignup({
   const [copied, setCopied] = useState(false);
   const [polling, setPolling] = useState(true);
   const [payLoading, setPayLoading] = useState(false);
+  const [payError, setPayError] = useState("");
 
   const claimToken = result.claimCode;
   const cliCommand = `npx tokenmap ${claimToken}`;
@@ -241,6 +241,7 @@ function PostSignup({
           <button
             onClick={async () => {
               setPayLoading(true);
+              setPayError("");
               try {
                 const res = await fetch("/api/checkout", {
                   method: "POST",
@@ -252,8 +253,12 @@ function PostSignup({
                   window.location.href = data.checkoutUrl;
                 } else if (data.alreadyPaid) {
                   setStep("done");
+                } else {
+                  setPayError(data.error || "Something went wrong");
+                  setPayLoading(false);
                 }
               } catch {
+                setPayError("Network error. Try again.");
                 setPayLoading(false);
               }
             }}
@@ -262,6 +267,8 @@ function PostSignup({
           >
             {payLoading ? "Redirecting..." : "Claim my tile — $5"}
           </button>
+
+          {payError && <p className="text-red-400 text-[11px] text-center">{payError}</p>}
 
           <p className="text-white/15 text-[10px] text-center">
             One-time payment. No subscription.
@@ -521,7 +528,7 @@ function DoneState({ result, claimCode }: { result: SignupResult; claimCode: str
       )}
 
       {/* Share */}
-      <div className="text-center">
+      <div className="text-center space-y-2">
         <button
           onClick={() => {
             const tokenPart = Number(result.totalTokens) > 0
@@ -538,6 +545,15 @@ function DoneState({ result, claimCode }: { result: SignupResult; claimCode: str
             <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
           </svg>
           Share on Twitter
+        </button>
+        <button
+          onClick={() => {
+            localStorage.removeItem("tokenmap_user");
+            window.location.reload();
+          }}
+          className="text-white/10 text-[10px] hover:text-white/30 transition"
+        >
+          Not you? Sign out
         </button>
       </div>
     </div>
