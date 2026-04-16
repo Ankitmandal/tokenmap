@@ -11,4 +11,6 @@ export default [
   route("api/lookup", "routes/api.lookup.tsx"),
   route("api/claim", "routes/api.claim.tsx"),
   route("api/claim-status", "routes/api.claim-status.tsx"),
+  route("api/checkout", "routes/api.checkout.tsx"),
+  route("api/webhook", "routes/api.webhook.tsx"),
 ] satisfies RouteConfig;

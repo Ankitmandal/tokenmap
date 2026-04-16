@@ -26,5 +26,10 @@ model Builder {
   verified       Boolean  @default(false)
   verifiedAt     DateTime? @map("verified_at")
 
+  // Payment
+  paid           Boolean  @default(false)
+  paidAt         DateTime? @map("paid_at")
+  paymentId      String?  @map("payment_id")
+
   @@map("builders")
 }

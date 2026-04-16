@@ -17,6 +17,7 @@ export async function loader({ request }: Route.LoaderArgs) {
       totalTokens: true,
       verified: true,
       provider: true,
+      paid: true,
     },
     orderBy: { totalTokens: "desc" },
     take: 200, // cap for performance
@@ -34,6 +35,7 @@ export async function loader({ request }: Route.LoaderArgs) {
       verified: t.verified,
       provider: t.provider,
       size: tokenToSize(Number(t.totalTokens)),
+      paid: t.paid,
     })),
   });
 }

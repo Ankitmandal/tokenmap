@@ -131,12 +131,13 @@ function PostSignup({
   result: SignupResult;
   onTokensUpdated: (tokens: string, verified: boolean) => void;
 }) {
-  const [step, setStep] = useState<"cli" | "stats" | "done" | "manual">(
+  const [step, setStep] = useState<"cli" | "stats" | "pay" | "done" | "manual">(
     Number(result.totalTokens) > 0 ? "done" : "cli"
   );
   const [scanStats, setScanStats] = useState<any>(null);
   const [copied, setCopied] = useState(false);
   const [polling, setPolling] = useState(true);
+  const [payLoading, setPayLoading] = useState(false);
 
   const claimToken = result.claimCode;
   const cliCommand = `npx tokenmap ${claimToken}`;
@@ -173,9 +174,57 @@ function PostSignup({
         stats={scanStats}
         onDone={() => {
           onTokensUpdated(String(scanStats.totalTokens), true);
-          setStep("done");
+          setStep("pay");
         }}
       />
+    );
+  }
+
+  // Payment step
+  if (step === "pay") {
+    return (
+      <div className="space-y-4">
+        <div className="text-center space-y-3">
+          <p className="text-orange-400 text-[28px] font-bold">{scanStats?.totalFormatted || formatTokens(Number(result.totalTokens))}</p>
+          <p className="text-white/30 text-[12px]">tokens verified</p>
+        </div>
+
+        <div className="bg-white/[0.03] rounded-xl p-4 border border-white/[0.06] space-y-3">
+          <p className="text-[13px] font-semibold text-center">Go live on the map</p>
+          <p className="text-white/30 text-[11px] text-center leading-relaxed">
+            Your tile is ready. Pay once to make it permanent — visible on the map and leaderboard forever.
+          </p>
+
+          <button
+            onClick={async () => {
+              setPayLoading(true);
+              try {
+                const res = await fetch("/api/checkout", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ email: result.email }),
+                });
+                const data = await res.json();
+                if (data.checkoutUrl) {
+                  window.location.href = data.checkoutUrl;
+                } else if (data.alreadyPaid) {
+                  setStep("done");
+                }
+              } catch {
+                setPayLoading(false);
+              }
+            }}
+            disabled={payLoading}
+            className="w-full py-3 rounded-xl bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-[14px] font-semibold transition shadow-lg shadow-orange-500/20"
+          >
+            {payLoading ? "Redirecting..." : "Claim my tile — $5"}
+          </button>
+
+          <p className="text-white/15 text-[10px] text-center">
+            One-time payment. No subscription.
+          </p>
+        </div>
+      </div>
     );
   }
 

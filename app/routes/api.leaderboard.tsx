@@ -4,6 +4,7 @@ import { prisma } from "../db.server";
 export async function loader({ request }: Route.LoaderArgs) {
   const [topBuilders, totalCount] = await Promise.all([
     prisma.builder.findMany({
+      where: { paid: true, totalTokens: { gt: 0 } },
       select: {
         githubUsername: true,
         city: true,
@@ -14,7 +15,7 @@ export async function loader({ request }: Route.LoaderArgs) {
       orderBy: { totalTokens: "desc" },
       take: 10,
     }),
-    prisma.builder.count(),
+    prisma.builder.count({ where: { paid: true } }),
   ]);
 
   return Response.json({
