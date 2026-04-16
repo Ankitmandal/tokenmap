@@ -36,8 +36,9 @@ export function meta({}: Route.MetaArgs) {
 
 export async function loader({}: Route.LoaderArgs) {
   const [totalCount, topBuilders] = await Promise.all([
-    prisma.builder.count(),
+    prisma.builder.count({ where: { paid: true, totalTokens: { gt: 0 } } }),
     prisma.builder.findMany({
+      where: { paid: true, totalTokens: { gt: 0 } },
       select: {
         githubUsername: true,
         city: true,
@@ -98,18 +99,11 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
     setRestoringSession(true);
 
-    fetch("/api/signup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email,
-        city: storedParsed?.city || "Unknown",
-        githubUsername: storedParsed?.name || "",
-      }),
-    })
+    // Use read-only lookup — never creates ghost accounts
+    fetch(`/api/lookup?email=${encodeURIComponent(email)}`)
       .then((r) => r.json())
       .then((data) => {
-        if (data.success) {
+        if (data.found) {
           // If returning from payment, treat as paid even if webhook hasn't fired yet
           const isPaid = data.paid || paidReturn;
           const user = {
@@ -126,6 +120,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           };
           setCurrentUser(user);
           localStorage.setItem("tokenmap_user", JSON.stringify(user));
+        } else {
+          // User not found in DB — stale localStorage, clear it
+          localStorage.removeItem("tokenmap_user");
         }
       })
       .catch(() => {})

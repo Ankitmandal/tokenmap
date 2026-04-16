@@ -13,11 +13,15 @@ export async function loader({ request }: Route.LoaderArgs) {
   const builder = await prisma.builder.findUnique({
     where: { email },
     select: {
+      id: true,
       email: true,
       githubUsername: true,
       city: true,
       totalTokens: true,
       verified: true,
+      paid: true,
+      claimCode: true,
+      referralCode: true,
     },
   });
 
@@ -25,12 +29,26 @@ export async function loader({ request }: Route.LoaderArgs) {
     return Response.json({ found: false }, { status: 404 });
   }
 
+  // Calculate position and city stats
+  const [position, cityCount, cityPosition] = await Promise.all([
+    prisma.builder.count({ where: { id: { lte: builder.id } } }),
+    prisma.builder.count({ where: { city: builder.city } }),
+    prisma.builder.count({ where: { city: builder.city, id: { lte: builder.id } } }),
+  ]);
+
   return Response.json({
     found: true,
+    success: true,
     email: builder.email,
     githubUsername: builder.githubUsername || "",
     city: builder.city,
     totalTokens: builder.totalTokens.toString(),
     verified: builder.verified,
+    paid: builder.paid,
+    claimCode: builder.claimCode,
+    referralCode: builder.referralCode,
+    position,
+    cityPosition,
+    cityCount,
   });
 }

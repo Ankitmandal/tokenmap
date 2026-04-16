@@ -243,6 +243,8 @@ function PostSignup({
               setPayLoading(true);
               setPayError("");
               try {
+                // Try local API first; if it fails, fall back to production
+                let checkoutUrl = "";
                 const res = await fetch("/api/checkout", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
@@ -250,12 +252,30 @@ function PostSignup({
                 });
                 let data: any;
                 try { data = await res.json(); } catch { data = {}; }
+
                 if (data.checkoutUrl) {
-                  window.location.href = data.checkoutUrl;
+                  checkoutUrl = data.checkoutUrl;
                 } else if (data.alreadyPaid) {
                   setStep("done");
+                  return;
+                } else if (data.error?.includes("not configured")) {
+                  // Local dev — hit production API directly
+                  const prodRes = await fetch("https://tokenmap-production.up.railway.app/api/checkout", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: result.email }),
+                  });
+                  let prodData: any;
+                  try { prodData = await prodRes.json(); } catch { prodData = {}; }
+                  if (prodData.checkoutUrl) {
+                    checkoutUrl = prodData.checkoutUrl;
+                  }
+                }
+
+                if (checkoutUrl) {
+                  window.location.href = checkoutUrl;
                 } else {
-                  setPayError(data.error || "Something went wrong. Try the production site.");
+                  setPayError(data.error || "Something went wrong.");
                   setPayLoading(false);
                 }
               } catch {
