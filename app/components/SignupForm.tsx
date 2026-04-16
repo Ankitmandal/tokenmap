@@ -19,8 +19,10 @@ interface SignupResult {
 
 export function SignupForm({
   onSuccess,
+  currentUser,
 }: {
   onSuccess?: (result: SignupResult) => void;
+  currentUser?: { name: string; email: string; city: string; tokens: string; verified: boolean; paid: boolean; claimCode: string } | null;
 }) {
   const [email, setEmail] = useState("");
   const [city, setCity] = useState("");
@@ -29,6 +31,28 @@ export function SignupForm({
   const [error, setError] = useState("");
   const [result, setResult] = useState<SignupResult | null>(null);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  // Auto-restore session from currentUser (localStorage)
+  useEffect(() => {
+    if (currentUser && !result) {
+      // Build a SignupResult from the stored user data
+      setResult({
+        success: true,
+        alreadyExists: true,
+        position: 0,
+        email: currentUser.email,
+        githubUsername: currentUser.name,
+        city: currentUser.city,
+        cityPosition: 0,
+        cityCount: 0,
+        claimCode: currentUser.claimCode,
+        referralCode: "",
+        verified: currentUser.verified,
+        paid: currentUser.paid,
+        totalTokens: currentUser.tokens,
+      });
+    }
+  }, [currentUser]);
 
   // Auto-detect location + city
   useEffect(() => {

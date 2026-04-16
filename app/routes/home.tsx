@@ -75,7 +75,44 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const [builders, setBuilders] = useState<BuilderEntry[]>(initialBuilders);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [currentUser, setCurrentUser] = useState<{ name: string; email: string; city: string; tokens: string; verified: boolean } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ name: string; email: string; city: string; tokens: string; verified: boolean; paid: boolean; claimCode: string } | null>(null);
+
+  // Restore session from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem("tokenmap_user");
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (parsed.email) {
+          // Re-fetch fresh data from server
+          fetch("/api/signup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: parsed.email, city: parsed.city || "Unknown", githubUsername: parsed.name }),
+          })
+            .then((r) => r.json())
+            .then((data) => {
+              if (data.success) {
+                const user = {
+                  name: data.githubUsername || data.email.split("@")[0],
+                  email: data.email,
+                  city: data.city,
+                  tokens: data.totalTokens,
+                  verified: data.verified,
+                  paid: data.paid,
+                  claimCode: data.claimCode,
+                };
+                setCurrentUser(user);
+                localStorage.setItem("tokenmap_user", JSON.stringify(user));
+              }
+            })
+            .catch(() => {});
+        }
+      } catch {
+        localStorage.removeItem("tokenmap_user");
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(async () => {
@@ -194,6 +231,27 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                           </span>
                         </div>
                       </div>
+                      <div className="border-t border-white/[0.06]">
+                        {currentUser.name && (
+                          <a
+                            href={`/u/${currentUser.name}`}
+                            className="block px-3 py-2 text-[11px] text-white/30 hover:text-white/60 transition"
+                          >
+                            View profile
+                          </a>
+                        )}
+                        <button
+                          onClick={() => {
+                            localStorage.removeItem("tokenmap_user");
+                            setCurrentUser(null);
+                            setShowProfile(false);
+                            window.location.reload();
+                          }}
+                          className="w-full text-left px-3 py-2 text-[11px] text-white/20 hover:text-red-400/60 transition"
+                        >
+                          Sign out
+                        </button>
+                      </div>
                     </div>
                   </>
                 )}
@@ -280,16 +338,22 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               <h2 className="text-[14px] font-bold tracking-tight mb-3">
                 Get on the board
               </h2>
-              <SignupForm onSuccess={(result) => {
+              <SignupForm
+                currentUser={currentUser}
+                onSuccess={(result) => {
                   refreshLeaderboard();
                   if (result) {
-                    setCurrentUser({
+                    const user = {
                       name: result.githubUsername || result.email.split("@")[0],
                       email: result.email,
                       city: result.city,
                       tokens: result.totalTokens,
                       verified: result.verified,
-                    });
+                      paid: result.paid,
+                      claimCode: result.claimCode,
+                    };
+                    setCurrentUser(user);
+                    localStorage.setItem("tokenmap_user", JSON.stringify(user));
                   }
                 }} />
             </div>
