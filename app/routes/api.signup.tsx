@@ -60,6 +60,7 @@ export async function action({ request }: Route.ActionArgs) {
       claimCode: existing.claimCode,
       referralCode: existing.referralCode,
       verified: existing.verified,
+      paid: existing.paid,
       totalTokens: existing.totalTokens.toString(),
     });
   }
@@ -101,6 +102,7 @@ export async function action({ request }: Route.ActionArgs) {
     claimCode: entry.claimCode,
     referralCode: entry.referralCode,
     verified: false,
+    paid: false,
     totalTokens: "0",
   });
 }

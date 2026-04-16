@@ -13,6 +13,7 @@ interface SignupResult {
   claimCode: string;
   referralCode: string;
   verified: boolean;
+  paid: boolean;
   totalTokens: string;
 }
 
@@ -29,11 +30,25 @@ export function SignupForm({
   const [result, setResult] = useState<SignupResult | null>(null);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
 
-  // Auto-detect location
+  // Auto-detect location + city
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (pos) => setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        async (pos) => {
+          const { latitude, longitude } = pos.coords;
+          setCoords({ lat: latitude, lng: longitude });
+          // Reverse geocode to get city
+          try {
+            const res = await fetch(
+              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+            );
+            const data = await res.json();
+            const detectedCity = data.city || data.locality || data.principalSubdivision || "";
+            if (detectedCity && !city) {
+              setCity(detectedCity);
+            }
+          } catch {}
+        },
         () => {}
       );
     }
@@ -131,9 +146,13 @@ function PostSignup({
   result: SignupResult;
   onTokensUpdated: (tokens: string, verified: boolean) => void;
 }) {
-  const [step, setStep] = useState<"cli" | "stats" | "pay" | "done" | "manual">(
-    Number(result.totalTokens) > 0 ? "done" : "cli"
-  );
+  // Determine initial step based on user state
+  const initialStep = (): "cli" | "stats" | "pay" | "done" | "manual" => {
+    if (result.paid) return "done";                          // already paid → show position
+    if (Number(result.totalTokens) > 0) return "pay";       // scanned but not paid → show payment
+    return "cli";                                             // new user → show CLI command
+  };
+  const [step, setStep] = useState(initialStep);
   const [scanStats, setScanStats] = useState<any>(null);
   const [copied, setCopied] = useState(false);
   const [polling, setPolling] = useState(true);
