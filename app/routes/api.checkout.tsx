@@ -2,9 +2,9 @@ import type { Route } from "./+types/api.checkout";
 import { prisma } from "../db.server";
 import DodoPayments from "dodopayments";
 
-function getDodoClient(): DodoPayments {
+function getDodoClient(): DodoPayments | null {
   const apiKey = process.env["DODO_API_KEY"];
-  if (!apiKey) throw new Error("DODO_API_KEY is not set");
+  if (!apiKey) return null;
   const isLive = apiKey.startsWith("sk_live_");
   return new DodoPayments({
     bearerToken: apiKey,
@@ -34,13 +34,18 @@ export async function action({ request }: Route.ActionArgs) {
   }
 
   const productId = process.env["DODO_PRODUCT_ID"];
-  if (!productId) throw new Error("DODO_PRODUCT_ID is not set");
+  if (!productId) {
+    return Response.json({ error: "Payment not configured. Try the production site." }, { status: 500 });
+  }
 
   const baseUrl = process.env["RAILWAY_PUBLIC_DOMAIN"]
     ? `https://${process.env["RAILWAY_PUBLIC_DOMAIN"]}`
     : process.env["BASE_URL"] || "http://localhost:5173";
 
   const client = getDodoClient();
+  if (!client) {
+    return Response.json({ error: "Payment not configured. Try the production site." }, { status: 500 });
+  }
   const session = await client.checkoutSessions.create({
     product_cart: [{ product_id: productId, quantity: 1 }],
     customer: { email, name: builder.githubUsername || email.split("@")[0] },

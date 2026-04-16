@@ -248,13 +248,14 @@ function PostSignup({
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ email: result.email }),
                 });
-                const data = await res.json();
+                let data: any;
+                try { data = await res.json(); } catch { data = {}; }
                 if (data.checkoutUrl) {
                   window.location.href = data.checkoutUrl;
                 } else if (data.alreadyPaid) {
                   setStep("done");
                 } else {
-                  setPayError(data.error || "Something went wrong");
+                  setPayError(data.error || "Something went wrong. Try the production site.");
                   setPayLoading(false);
                 }
               } catch {
