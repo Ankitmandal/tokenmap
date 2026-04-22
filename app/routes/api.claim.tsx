@@ -69,7 +69,7 @@ export async function action({ request }: Route.ActionArgs) {
     url: "",
   }));
 
-  // Update builder with verified stats + projects
+  // Update builder with verified stats + projects + full stats blob
   await prisma.builder.update({
     where: { id: builder.id },
     data: {
@@ -78,6 +78,7 @@ export async function action({ request }: Route.ActionArgs) {
       verified: true,
       verifiedAt: new Date(),
       projects: projectsData,
+      stats: stats as any,
     },
   });
 

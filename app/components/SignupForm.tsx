@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { getTier, getNextTier, getTierProgress } from "../lib/tiers";
+import { computeBadges } from "../lib/badges";
 
 interface SignupResult {
   success: boolean;
@@ -847,6 +849,11 @@ function StatsCard({ stats, onDone }: { stats: any; onDone: () => void }) {
   const maxProjectMsgs = stats.projects[0]?.count || 1;
   const maxToolCalls = stats.topTools[0]?.count || 1;
 
+  const tier = getTier(stats.totalTokens);
+  const nextTier = getNextTier(stats.totalTokens);
+  const progress = getTierProgress(stats.totalTokens);
+  const badges = computeBadges(stats);
+
   return (
     <div className="bg-gradient-to-b from-white/[0.04] to-white/[0.01] rounded-2xl border border-white/[0.08] overflow-hidden">
       {/* Header */}
@@ -860,13 +867,47 @@ function StatsCard({ stats, onDone }: { stats: any; onDone: () => void }) {
         </div>
       </div>
 
-      {/* Big number */}
+      {/* Big number + tier */}
       <div className="text-center py-5 px-5">
+        <div className="text-[44px] mb-1">{tier.emoji}</div>
         <p className="text-[42px] font-bold text-orange-400 leading-none tracking-tight">
           {stats.totalFormatted}
         </p>
         <p className="text-white/25 text-[12px] mt-2">tokens burned</p>
+        <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20">
+          <span className="text-[13px] font-bold text-orange-400">{tier.name}</span>
+        </div>
+        <p className="text-white/30 text-[11px] mt-2 italic">"{tier.tagline}"</p>
+        {nextTier && (
+          <div className="mt-3 mx-4">
+            <div className="h-1 rounded-full bg-white/[0.06] overflow-hidden">
+              <div className="h-full rounded-full bg-gradient-to-r from-orange-500 to-orange-400" style={{ width: `${progress * 100}%` }} />
+            </div>
+            <p className="text-white/20 text-[10px] mt-1">
+              {formatTokens(nextTier.min - stats.totalTokens)} to {nextTier.emoji} {nextTier.name}
+            </p>
+          </div>
+        )}
       </div>
+
+      {/* Badges earned */}
+      {badges.length > 0 && (
+        <div className="mx-5 mb-4">
+          <p className="text-white/20 text-[10px] uppercase tracking-wider mb-2">Badges earned</p>
+          <div className="flex flex-wrap gap-1.5">
+            {badges.map((b) => (
+              <div
+                key={b.id}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/[0.04] border border-white/[0.06]"
+                title={b.description}
+              >
+                <span className="text-[12px]">{b.emoji}</span>
+                <span className="text-[10px] font-medium text-white/70">{b.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Token breakdown */}
       <div className="grid grid-cols-4 gap-px bg-white/[0.04] mx-5 rounded-lg overflow-hidden mb-4">

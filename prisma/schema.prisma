@@ -29,6 +29,12 @@ model Builder {
   // Projects (from CLI scan)
   projects       Json?    @default("[]")
 
+  // Full stats blob from CLI scan (for badges + display)
+  stats          Json?
+
+  // Custom title (premium)
+  customTitle    String?  @map("custom_title")
+
   // Payment
   paid           Boolean  @default(false)
   paidAt         DateTime? @map("paid_at")

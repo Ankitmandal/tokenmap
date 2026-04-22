@@ -1,6 +1,6 @@
 {
   "name": "tokenmap",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Scan your Claude Code usage and claim your tile on TokenMap",
   "bin": {
     "tokenmap": "./bin/tokenmap.mjs"

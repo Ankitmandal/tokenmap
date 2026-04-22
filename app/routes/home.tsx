@@ -1,6 +1,7 @@
 import type { Route } from "./+types/home";
 import { prisma } from "../db.server";
 import { SignupForm } from "../components/SignupForm";
+import { getTier } from "../lib/tiers";
 import { useEffect, useState, lazy, Suspense } from "react";
 
 function formatTokens(n: number): string {
@@ -329,6 +330,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
                           <span className="text-[12px] font-medium truncate">{b.name}</span>
+                          <span className="text-[11px]" title={getTier(Number(b.tokens)).name}>{getTier(Number(b.tokens)).emoji}</span>
                           {b.verified && (
                             <span className="text-green-400/60 text-[8px]">✓</span>
                           )}

@@ -6,7 +6,7 @@ import { homedir } from "node:os";
 import { existsSync } from "node:fs";
 
 // ── Config ──
-const API_BASE = process.env.TOKENMAP_API || "https://tokenmap.dev";
+const API_BASE = process.env.TOKENMAP_API || "https://tokenmap-production.up.railway.app";
 
 // ── Colors ──
 const orange = (s) => `\x1b[38;5;208m${s}\x1b[0m`;
@@ -213,11 +213,24 @@ const daySpan = firstDate && lastDate
   ? Math.ceil((lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24))
   : 0;
 
+// ── Tier lookup ──
+const TIERS = [
+  { name: "Sprout",      emoji: "🌱", min: 0,              max: 10_000_000 },
+  { name: "Sparker",     emoji: "⚡", min: 10_000_000,     max: 100_000_000 },
+  { name: "Combustor",   emoji: "🔥", min: 100_000_000,    max: 500_000_000 },
+  { name: "Detonator",   emoji: "💥", min: 500_000_000,    max: 1_000_000_000 },
+  { name: "Volcano",     emoji: "🌋", min: 1_000_000_000,  max: 5_000_000_000 },
+  { name: "Inferno",     emoji: "☄️",  min: 5_000_000_000,  max: 20_000_000_000 },
+  { name: "Singularity", emoji: "🌌", min: 20_000_000_000, max: Infinity },
+];
+const tier = TIERS.find((t) => totalTokens >= t.min && totalTokens < t.max) || TIERS[TIERS.length - 1];
+
 // ── Step 3: Display stats ──
-console.log(`  ${orange(bold(fmt(totalTokens)))} tokens burned`);
+console.log(`  ${orange(bold(fmt(totalTokens)))} tokens burned   ${dim("·")}   ${tier.emoji} ${bold(tier.name)}`);
 console.log("");
 console.log(`  ${dim("Input")}     ${fmt(inputTokens).padStart(8)}    ${dim("Output")}    ${fmt(outputTokens).padStart(8)}`);
 console.log(`  ${dim("Cache ↑")}   ${fmt(cacheCreation).padStart(8)}    ${dim("Cache ↓")}   ${fmt(cacheRead).padStart(8)}`);
+console.log(`  ${dim("note: total = input + output + cache (matches /cost command)")}`);
 console.log("");
 console.log(`  ${dim("Sessions")}  ${String(sessions.size).padStart(8)}    ${dim("Messages")}  ${String(messages).padStart(8)}`);
 console.log(`  ${dim("Active")}    ${String(activeDays).padStart(7)}d    ${dim("Span")}      ${String(daySpan).padStart(7)}d`);
